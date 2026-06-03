@@ -13,14 +13,14 @@ class TestThemes(unittest.TestCase):
         self.assertIn("default", THEME_NAMES)
 
     def test_get_theme_returns_dict_with_required_keys(self):
-        from widget.themes import get_theme
+        from widget.themes import get_theme, THEME_NAMES
         required = {
             "width", "alpha", "bg", "panel", "border", "text", "muted",
             "good", "warn", "bad", "accent", "font", "font_small",
             "font_mono", "font_title", "pad", "bar_h", "gap",
             "title_h", "warn_at", "bad_at",
         }
-        for name in ("default", "neon", "light", "minimal"):
+        for name in THEME_NAMES:
             with self.subTest(theme=name):
                 t = get_theme(name)
                 self.assertTrue(required.issubset(t.keys()))
