@@ -1,11 +1,23 @@
 """Claude Usage Widget — entry point."""
 from __future__ import annotations
 
+import atexit
+import ctypes
 import datetime
+import sys
 import tkinter as tk
 import tkinter.simpledialog as sd
 import tkinter.messagebox as mb
 from typing import Optional
+
+
+def _ensure_single_instance() -> None:
+    """Exit immediately if another instance is already running."""
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "ClaudeUsageWidget_v1")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        sys.exit(0)
+    # Keep mutex referenced so it isn't garbage-collected for the process lifetime
+    _ensure_single_instance._mutex = mutex
 
 from widget.api import get_org_id, get_usage, WidgetAPIError
 from widget.config import load as load_cfg, save as save_cfg, DEFAULT_PATH
@@ -86,6 +98,7 @@ def _ask_session_key(cfg: dict, master: Optional[tk.Misc] = None) -> bool:
 
 
 def main():
+    _ensure_single_instance()
     cfg = load_cfg()
 
     # First-run: no session key — use a temporary Tk before the persistent root exists
@@ -108,6 +121,12 @@ def main():
     root = tk.Tk()
     root.withdraw()
     initial_theme = get_theme(cfg.get("theme", "default"))
+
+    # Clamp saved position to visible screen area so the window can never be off-screen
+    sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+    if cfg.get("win_x") is not None and cfg.get("win_y") is not None:
+        if not (0 <= cfg["win_x"] <= sw - 50 and 0 <= cfg["win_y"] <= sh - 50):
+            cfg["win_x"] = cfg["win_y"] = None
 
     window = UsageWindow(
         master=root,
@@ -177,6 +196,7 @@ def main():
     poller.on_update = _on_data
     poller.start()
     tray.start()
+    atexit.register(tray.stop)  # remove icon even on unexpected exit
 
     root.mainloop()
 
