@@ -51,13 +51,12 @@ class TrayIcon:
         self._icon: Optional[pystray.Icon] = None
 
     def _build_menu(self) -> pystray.Menu:
-        theme_items = tuple(
-            pystray.MenuItem(
+        def _make_theme_item(name: str) -> pystray.MenuItem:
+            return pystray.MenuItem(
                 name,
-                lambda icon, item, n=name: self._on_theme_change(n),
+                lambda icon, item: self._on_theme_change(name),
             )
-            for name in THEME_NAMES
-        )
+        theme_items = tuple(_make_theme_item(n) for n in THEME_NAMES)
         return pystray.Menu(
             pystray.MenuItem("Show / Hide", lambda icon, item: self._on_show_hide()),
             pystray.MenuItem("Refresh now", lambda icon, item: self._on_refresh()),
