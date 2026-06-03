@@ -47,6 +47,21 @@ class TestConfig(unittest.TestCase):
         self.assertIsNone(cfg["org_id"])
         self.assertEqual(cfg["refresh_interval"], 300)
 
+    def test_load_includes_theme_default(self):
+        from widget.config import load
+        p = self._temp_path()
+        cfg = load(p)
+        self.assertEqual(cfg["theme"], "default")
+
+    def test_save_and_reload_theme(self):
+        from widget.config import load, save
+        p = self._temp_path()
+        cfg = load(p)
+        cfg["theme"] = "neon"
+        save(cfg, p)
+        reloaded = load(p)
+        self.assertEqual(reloaded["theme"], "neon")
+
 
 if __name__ == "__main__":
     unittest.main()

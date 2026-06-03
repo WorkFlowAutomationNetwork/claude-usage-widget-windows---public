@@ -11,6 +11,7 @@ _DEFAULTS: dict[str, Any] = {
     "refresh_interval": 300,
     "win_x": None,
     "win_y": None,
+    "theme": "default",
 }
 
 DEFAULT_PATH = Path.home() / ".claude" / "claude-usage-widget.json"
