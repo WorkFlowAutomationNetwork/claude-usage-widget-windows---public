@@ -5,12 +5,14 @@ import datetime
 import tkinter as tk
 import tkinter.simpledialog as sd
 import tkinter.messagebox as mb
+from typing import Optional
 
 from widget.api import get_org_id, get_usage, WidgetAPIError
 from widget.config import load as load_cfg, save as save_cfg, DEFAULT_PATH
 from widget.poller import Poller
 from widget.tray import TrayIcon
-from widget.ui import UsageWindow, THEME
+from widget.themes import get_theme
+from widget.ui import UsageWindow
 
 
 def _make_fetch(cfg: dict):
@@ -56,10 +58,14 @@ def _make_fetch(cfg: dict):
     return fetch
 
 
-def _ask_session_key(cfg: dict) -> bool:
+def _ask_session_key(cfg: dict, master: Optional[tk.Misc] = None) -> bool:
     """Show dialog asking for session key. Returns True if key was saved."""
-    root = tk.Tk()
-    root.withdraw()
+    if master is None:
+        tmp = tk.Tk()
+        tmp.withdraw()
+        parent: tk.Misc = tmp
+    else:
+        parent = master
     key = sd.askstring(
         "Claude Usage Widget — Session Key",
         "Paste your claude.ai sessionKey cookie value.\n\n"
@@ -67,9 +73,10 @@ def _ask_session_key(cfg: dict) -> bool:
         "1. Open claude.ai in Chrome and log in\n"
         "2. Press F12 -> Application -> Cookies -> https://claude.ai\n"
         "3. Copy the value of the 'sessionKey' cookie",
-        parent=root,
+        parent=parent,
     )
-    root.destroy()
+    if master is None:
+        tmp.destroy()
     if not key or not key.strip():
         return False
     cfg["session_key"] = key.strip()
@@ -81,34 +88,31 @@ def _ask_session_key(cfg: dict) -> bool:
 def main():
     cfg = load_cfg()
 
-    # First-run: no session key
+    # First-run: no session key — use a temporary Tk before the persistent root exists
     if not cfg.get("session_key"):
-        root = tk.Tk()
-        root.withdraw()
+        tmp = tk.Tk()
+        tmp.withdraw()
         want_key = mb.askyesno(
             "Claude Usage Widget",
             "No session key found.\n\nWould you like to set one now?\n\n"
             "(You can also do this later via the system tray menu)",
-            parent=root,
+            parent=tmp,
         )
-        root.destroy()
+        tmp.destroy()
         if want_key:
             _ask_session_key(cfg)
 
     fetch_fn = _make_fetch(cfg)
 
-    # Quit handler -- defined early so tray can reference it
-    def _quit():
-        x, y = window.get_position()
-        cfg["win_x"], cfg["win_y"] = x, y
-        save_cfg(cfg)
-        poller.stop()
-        tray.stop()
-        window.destroy()
+    # Persistent hidden root — owns the mainloop so window rebuilds don't kill it
+    root = tk.Tk()
+    root.withdraw()
 
     window = UsageWindow(
+        master=root,
         on_close_to_tray=lambda: None,
         on_refresh=lambda: poller.refresh(),
+        theme=get_theme(cfg.get("theme", "default")),
     )
     if cfg.get("win_x") is not None and cfg.get("win_y") is not None:
         window.show(cfg["win_x"], cfg["win_y"])
@@ -117,25 +121,56 @@ def main():
 
     poller = Poller(fetch_fn=fetch_fn, interval=cfg.get("refresh_interval", 300))
 
-    tray = TrayIcon(
-        on_show_hide=lambda: window.hide() if window.is_visible() else window.show(),
-        on_refresh=lambda: poller.refresh(),
-        on_set_key=lambda: _ask_session_key(cfg) and poller.refresh(),
-        on_quit=_quit,
-        theme=THEME,
-    )
-
     def _on_data(data: dict):
+        # 'window' is read from enclosing scope at call time, so it sees rebuilds
         window.update_data(data)
         pct = data.get("session_pct")
         if pct is not None:
             tray.update(pct)
 
+    def _do_rebuild(theme_name: str) -> None:
+        nonlocal window
+        x, y = window.get_position()
+        window.destroy()
+        new_theme = get_theme(theme_name)
+        window = UsageWindow(
+            master=root,
+            on_close_to_tray=lambda: None,
+            on_refresh=lambda: poller.refresh(),
+            theme=new_theme,
+        )
+        window.show(x, y)
+        tray.update_theme(new_theme)
+        cfg["theme"] = theme_name
+        save_cfg(cfg)
+
+    def _on_theme_change(theme_name: str) -> None:
+        # pystray callbacks run on a background thread; schedule onto the Tk main thread
+        root.after(0, lambda: _do_rebuild(theme_name))
+
+    def _quit():
+        x, y = window.get_position()
+        cfg["win_x"], cfg["win_y"] = x, y
+        save_cfg(cfg)
+        poller.stop()
+        tray.stop()
+        window.destroy()
+        root.destroy()
+
+    tray = TrayIcon(
+        on_show_hide=lambda: window.hide() if window.is_visible() else window.show(),
+        on_refresh=lambda: poller.refresh(),
+        on_set_key=lambda: _ask_session_key(cfg, root) and poller.refresh(),
+        on_theme_change=_on_theme_change,
+        on_quit=_quit,
+        theme=get_theme(cfg.get("theme", "default")),
+    )
+
     poller.on_update = _on_data
     poller.start()
     tray.start()
 
-    window.run()  # blocks until window.destroy()
+    root.mainloop()
 
 
 if __name__ == "__main__":
