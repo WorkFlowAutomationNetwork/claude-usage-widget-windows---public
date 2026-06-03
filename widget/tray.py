@@ -6,6 +6,8 @@ from typing import Callable, Optional
 import pystray
 from PIL import Image, ImageDraw
 
+from widget.themes import THEME_NAMES
+
 
 def _make_icon(pct: float, good: str, warn: str, bad: str,
                warn_at: int, bad_at: int) -> Image.Image:
@@ -35,21 +37,32 @@ class TrayIcon:
         on_show_hide: Callable,
         on_refresh: Callable,
         on_set_key: Callable,
+        on_theme_change: Callable[[str], None],
         on_quit: Callable,
         theme: dict,
     ):
         self._on_show_hide = on_show_hide
         self._on_refresh = on_refresh
         self._on_set_key = on_set_key
+        self._on_theme_change = on_theme_change
         self._on_quit = on_quit
         self._theme = theme
         self._pct = 0.0
         self._icon: Optional[pystray.Icon] = None
 
     def _build_menu(self) -> pystray.Menu:
+        theme_items = tuple(
+            pystray.MenuItem(
+                name,
+                lambda icon, item, n=name: self._on_theme_change(n),
+            )
+            for name in THEME_NAMES
+        )
         return pystray.Menu(
             pystray.MenuItem("Show / Hide", lambda icon, item: self._on_show_hide()),
             pystray.MenuItem("Refresh now", lambda icon, item: self._on_refresh()),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Theme", pystray.Menu(*theme_items)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Set session key…", lambda icon, item: self._on_set_key()),
             pystray.Menu.SEPARATOR,
@@ -80,6 +93,12 @@ class TrayIcon:
         if self._icon:
             self._icon.icon = self._current_image()
             self._icon.title = f"Claude — Session {session_pct:.0f}%"
+
+    def update_theme(self, theme: dict) -> None:
+        """Update the theme used for the tray icon colour."""
+        self._theme = theme
+        if self._icon:
+            self._icon.icon = self._current_image()
 
     def stop(self) -> None:
         if self._icon:
