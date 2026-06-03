@@ -165,12 +165,15 @@ class UsageWindow:
             w_pct  = data.get("weekly_pct") or 0
             w_secs = data.get("weekly_secs")
 
-            self._sess_pct.config(text=f"{s_pct:.1f}%", fg=_bar_color(s_pct, t))
-            self._week_pct.config(text=f"{w_pct:.1f}%" if w_pct else "—",
-                                  fg=_bar_color(w_pct, t) if w_pct else t["muted"])
+            s_color = _bar_color(s_pct, t)
+            w_color = _bar_color(w_pct, t)
 
-            self._draw_bar(self._sess_canvas, s_pct, _bar_color(s_pct, t))
-            self._draw_bar(self._week_canvas, w_pct, _bar_color(w_pct, t))
+            self._sess_pct.config(text=f"{s_pct:.1f}%", fg=s_color)
+            self._week_pct.config(text=f"{w_pct:.1f}%" if w_pct else "—",
+                                  fg=w_color if w_pct else t["muted"])
+
+            self._draw_bar(self._sess_canvas, s_pct, s_color)
+            self._draw_bar(self._week_canvas, w_pct, w_color)
 
             self._session_secs = s_secs
             self._weekly_secs  = w_secs
