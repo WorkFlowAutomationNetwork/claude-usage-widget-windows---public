@@ -107,12 +107,13 @@ def main():
     # Persistent hidden root — owns the mainloop so window rebuilds don't kill it
     root = tk.Tk()
     root.withdraw()
+    initial_theme = get_theme(cfg.get("theme", "default"))
 
     window = UsageWindow(
         master=root,
         on_close_to_tray=lambda: None,
         on_refresh=lambda: poller.refresh(),
-        theme=get_theme(cfg.get("theme", "default")),
+        theme=initial_theme,
     )
     if cfg.get("win_x") is not None and cfg.get("win_y") is not None:
         window.show(cfg["win_x"], cfg["win_y"])
@@ -131,6 +132,7 @@ def main():
     def _do_rebuild(theme_name: str) -> None:
         nonlocal window
         x, y = window.get_position()
+        was_visible = window.is_visible()
         window.destroy()
         new_theme = get_theme(theme_name)
         window = UsageWindow(
@@ -140,6 +142,8 @@ def main():
             theme=new_theme,
         )
         window.show(x, y)
+        if not was_visible:
+            window.hide()
         tray.update_theme(new_theme)
         cfg["theme"] = theme_name
         save_cfg(cfg)
@@ -157,13 +161,17 @@ def main():
         window.destroy()
         root.destroy()
 
+    def _on_set_key() -> None:
+        if _ask_session_key(cfg, root):
+            poller.refresh()
+
     tray = TrayIcon(
-        on_show_hide=lambda: window.hide() if window.is_visible() else window.show(),
-        on_refresh=lambda: poller.refresh(),
-        on_set_key=lambda: _ask_session_key(cfg, root) and poller.refresh(),
+        on_show_hide=lambda: root.after(0, lambda: window.hide() if window.is_visible() else window.show()),
+        on_refresh=lambda: root.after(0, poller.refresh),
+        on_set_key=lambda: root.after(0, _on_set_key),
         on_theme_change=_on_theme_change,
-        on_quit=_quit,
-        theme=get_theme(cfg.get("theme", "default")),
+        on_quit=lambda: root.after(0, _quit),
+        theme=initial_theme,
     )
 
     poller.on_update = _on_data
