@@ -38,7 +38,7 @@ On first launch you'll be prompted to paste your Claude session key (see below).
 
 > **After setup:** just use the desktop shortcut (or `launch.bat`) to start the widget. You don't need to run `setup.bat` again.
 
-> If you prefer the command line: `git clone https://github.com/WorkFlowAutomationNetwork/claude-usage-widget-windows.git` then run `setup.bat`.
+> If you prefer the command line: `git clone https://github.com/WorkFlowAutomationNetwork/claude-usage-widget-windows---public.git` then run `setup.bat`.
 
 ---
 
