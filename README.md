@@ -55,19 +55,34 @@ Your key is stored locally at `~/.claude/claude-usage-widget.json` and never sen
 
 ## Daily use
 
-Double-click the desktop shortcut to start. The widget appears in the top-left corner and a coloured dot appears in your system tray.
+Double-click the desktop shortcut to start. The widget appears in the top-left corner of your screen.
 
-**Tray menu** (right-click the dot):
+A coloured dot also appears in your **system tray** — that's the small area in the bottom-right corner of your taskbar near the clock. If you don't see it, click the **^** (up arrow) to reveal hidden icons.
+
+**Right-click the tray dot** to access:
 
 | Option | What it does |
 |--------|-------------|
-| Show / Hide | Toggle the floating window |
+| Show / Hide | Toggle the floating widget on/off |
 | Refresh now | Force an immediate data fetch |
-| Theme | Switch between Default, Neon, Light, Minimal |
+| Theme | Switch between the 4 built-in themes |
 | Set session key… | Update your Claude session key |
 | Quit | Exit cleanly |
 
 Usage data refreshes automatically every 5 minutes.
+
+---
+
+## Themes
+
+Switch anytime via Tray → Theme. Four options included:
+
+| Theme | Description |
+|-------|-------------|
+| **Default** | Dark background, green/amber/red bars — easy on the eyes |
+| **Neon** | Deep dark with vibrant neon colours |
+| **Light** | White background for bright environments |
+| **Minimal** | Compact, low-contrast, stays out of the way |
 
 ---
 
