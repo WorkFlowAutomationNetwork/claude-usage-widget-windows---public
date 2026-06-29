@@ -5,3 +5,12 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Internal AI planning docs
+docs/
+
+# Layout concept images (internal)
+layoutvariationconcepts/
+
+# User config (stored in ~/.claude/, not here)
+*.json
